@@ -23,10 +23,25 @@
 #include <Adafruit_BMP280.h>
 
 const int chipSelectPin = 4;
-const int dhtPin = 2;
+const uint8_t dhtPin = 2;
+const uint8_t dhtType = DHT22;
  
-DHT dht(dhtPin, DHT22);
+DHT dht(dhtPin, dhtType);
 Adafruit_BMP280 bmp;
+
+float getDewPoint(float tempData, float relHumidData){
+  // Equation from https://www.omnicalculator.com/physics/dew-point
+  
+  // Magnus coefficients
+  const float a = 17.625;
+  const float b = 243.04;
+
+  // Calculate intermediary value "alpha" which is used to calculate dew point
+  float alpha = log(relHumidData / 100) + (a * tempData) / (b + tempData);
+  float dewPoint = (b * alpha) / (a - alpha);
+
+  return dewPoint;
+}
 
 void setup() {
   Serial.begin(9600);
@@ -34,6 +49,7 @@ void setup() {
   }
   dht.begin();
 
+  /*
   Serial.print("Initializing BMP280... ");
   if(!bmp.begin()){
     Serial.println("BMP280 initialization failed");
@@ -42,10 +58,10 @@ void setup() {
   Serial.println("BMP280 successfully initialized");
 
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
-                  Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-                  Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
-                  Adafruit_BMP280::FILTER_X16,      /* Filtering. */
-                  Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
+  /*                Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
+  /*                Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
+  /*                Adafruit_BMP280::FILTER_X16,      /* Filtering. */
+  /*                Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
   
   Serial.print("Initializing SD card... ");
   if(!SD.begin(chipSelectPin)){
@@ -61,65 +77,40 @@ void setup() {
 }
 
 void loop() {
-  const int arrayLength = 4;
+  //const int arrayLength = 4;
+  const int arrayLength = 3;
   float sensorData[arrayLength] = {};
   
-  float temp = dht.readTemperature();
-  float relHum = dht.readHumidity();
-  float dewPoint = getDewPoint(temp, relHum);
-  float pressure = bmp.readPressure();
+  float temp = dht.readTemperature();           // Serial.print("Temp: "); Serial.print(temp); Serial.print(", ");
+  float relHumid = dht.readHumidity();          // Serial.print(" C, Rel Humid: "); Serial.print(relHumid); Serial.print(", ");
+  float dewPoint = getDewPoint(temp, relHumid); // Serial.print(" %, Dew Point: "); Serial.print(dewPoint); Serial.print(", ");
+  //float pressure = bmp.readPressure();        // Serial.print(" C, Pressure: "); Serial.print(pressure); Serial.println();
 
   sensorData[0] = temp;
-  sensorData[1] = relHum;
+  sensorData[1] = relHumid;
   sensorData[2] = dewPoint;
-  sensorData[3] = pressure;
-
-  String dataString = "";
-
-  for(int i = 0; i < arrayLength; i++){
-    dataString += String(sensorData[i]);
-    if(i < (arrayLength - 1)){
-      dataString += ",";
-    }
-  }
+  //sensorData[3] = pressure;
   
   File dataFile = SD.open("datalog.txt", FILE_WRITE);
 
   if(dataFile){
-    dataFile.println(dataString);
+    for(int i = 0; i < arrayLength; i++){
+      dataFile.print(sensorData[i]);
+      Serial.print(sensorData[i]);
+      
+      if(i < (arrayLength - 1)){
+        dataFile.print(",");
+        Serial.print(",");
+      }
+    }
+    dataFile.println();
+    Serial.println();
     dataFile.close();
-    Serial.println(dataString);
   }
   else{
     Serial.println("Error opening datalog.txt");
   }
-  
-  /*
-  // Debugging / data transfer values
-  //Serial.print("Temp: ");
-  Serial.print(temp);
-  Serial.print(", ");
-  //Serial.print(" C, Rel Hum: ");
-  Serial.print(relHum);
-  Serial.print(", ");
-  //Serial.print(" %, Dew Point: ");
-  Serial.print(getDewPoint(temp, relHum));
-  Serial.println(" ");
-  //Serial.println(" C");
-  */
 
   // DHT22 can only update readings every 2sec, so wait at least 2sec before running again
   delay(5000);
-}
-
-float getDewPoint(float tempData, float relHumData){
-  // Magnus coefficients
-  const float a = 17.625;
-  const float b = 243.04;
-
-  // Calculate intermediary value "alpha" which is used to calculate dew point
-  float alpha = log(relHumData / 100) + (a * tempData) / (b + tempData);
-  float dewPoint = (b * alpha) / (a - alpha);
-
-  return dewPoint;
 }
