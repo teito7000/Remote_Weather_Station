@@ -1,30 +1,3 @@
-/*
- * Wiring (L->R):
- * 
- * DHT22:
- * VCC
- * Data - Pin 2 (and 10k pullup to VCC)
- * NC
- * GND
- * 
- * SD Card Module:
- * GND
- * VCC
- * MISO - Pin 12
- * MOSI - Pin 11
- * SCK - Pin 13
- * CS - Pin 4
- * 
- * BMP280:
- * VIN - 5V
- * NC
- * GND
- * SCK - SCL
- * NC
- * SDI - SDA
- * NC
- */
-
 #include <DHT.h>
 #include <Wire.h>
 #include <SPI.h>
