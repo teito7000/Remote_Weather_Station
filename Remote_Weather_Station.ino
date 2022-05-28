@@ -2,18 +2,27 @@
  * Wiring (L->R):
  * 
  * DHT22:
- ** VCC
- ** Data - Pin 2 (and 10k pullup to VCC)
- ** NC
- ** GND
+ * VCC
+ * Data - Pin 2 (and 10k pullup to VCC)
+ * NC
+ * GND
  * 
  * SD Card Module:
- ** GND
- ** VCC
- ** MISO - Pin 12
- ** MOSI - Pin 11
- ** SCK - Pin 13
- ** CS - Pin 4
+ * GND
+ * VCC
+ * MISO - Pin 12
+ * MOSI - Pin 11
+ * SCK - Pin 13
+ * CS - Pin 4
+ * 
+ * BMP280:
+ * VIN - 5V
+ * NC
+ * GND
+ * SCK - SCL
+ * NC
+ * SDI - SDA
+ * NC
  */
 
 #include <DHT.h>
@@ -49,24 +58,24 @@ void setup() {
   }
   dht.begin();
 
-  /*
+  
   Serial.print("Initializing BMP280... ");
   if(!bmp.begin()){
     Serial.println("BMP280 initialization failed");
+    // Don't do anything more
     while(1);
   }
   Serial.println("BMP280 successfully initialized");
 
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
-  /*                Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-  /*                Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
-  /*                Adafruit_BMP280::FILTER_X16,      /* Filtering. */
-  /*                Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
+                  Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
+                  Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
+                  Adafruit_BMP280::FILTER_X16,      /* Filtering. */
+                  Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
   
   Serial.print("Initializing SD card... ");
   if(!SD.begin(chipSelectPin)){
     Serial.println("Card failed, or not present");
-    // Don't do anything more
     while(1);
   }
   Serial.println("SD card successfully initialized");
@@ -77,19 +86,18 @@ void setup() {
 }
 
 void loop() {
-  //const int arrayLength = 4;
-  const int arrayLength = 3;
+  const int arrayLength = 4;
   float sensorData[arrayLength] = {};
   
   float temp = dht.readTemperature();           // Serial.print("Temp: "); Serial.print(temp); Serial.print(", ");
   float relHumid = dht.readHumidity();          // Serial.print(" C, Rel Humid: "); Serial.print(relHumid); Serial.print(", ");
   float dewPoint = getDewPoint(temp, relHumid); // Serial.print(" %, Dew Point: "); Serial.print(dewPoint); Serial.print(", ");
-  //float pressure = bmp.readPressure();        // Serial.print(" C, Pressure: "); Serial.print(pressure); Serial.println();
+  float pressure = bmp.readPressure();          // Serial.print(" C, Pressure: "); Serial.print(pressure); Serial.println("Pa");
 
   sensorData[0] = temp;
   sensorData[1] = relHumid;
   sensorData[2] = dewPoint;
-  //sensorData[3] = pressure;
+  sensorData[3] = pressure;
   
   File dataFile = SD.open("datalog.txt", FILE_WRITE);
 
