@@ -5,9 +5,11 @@
 
 const uint8_t dhtPin = 2;
 const uint8_t dhtType = DHT22;
+const int CSN_PIN = 7;
+const int CE_PIN = 8;
 
 DHT dht(dhtPin, dhtType);
-RH_NRF24 nrf24(8, 7);
+RH_NRF24 nrf24(CE_PIN, CSN_PIN);
 Adafruit_BMP280 bmp;
 
 struct sensorData{
@@ -77,5 +79,5 @@ void loop() {
   nrf24.waitPacketSent();
 
   // DHT22 can only update readings every 2sec, so wait at least 2sec before running again
-  delay(2000);
+  delay(10000);
 }
