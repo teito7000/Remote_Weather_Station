@@ -12,26 +12,14 @@ DHT dht(dhtPin, dhtType);
 RH_NRF24 nrf24(CE_PIN, CSN_PIN);
 Adafruit_BMP280 bmp;
 
+float getDewPoint(float tempData, float relHumidData);
+
 struct sensorData{
   float temp;
   float relHumid;
   float dewPoint;
   float pressure;
 }; sensorData dataTX;
-
-float getDewPoint(float tempData, float relHumidData){
-  // Equation from https://www.omnicalculator.com/physics/dew-point
-  
-  // Magnus coefficients
-  const float a = 17.625;
-  const float b = 243.04;
-
-  // Calculate intermediary value "alpha" which is used to calculate dew point
-  float alpha = log(relHumidData / 100) + (a * tempData) / (b + tempData);
-  float dewPoint = (b * alpha) / (a - alpha);
-
-  return dewPoint;
-}
 
 void setup() {
   Serial.begin(9600);
@@ -55,7 +43,6 @@ void setup() {
     // Don't do anything more
     while(1);
   }
-
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                   Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
                   Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
@@ -64,20 +51,38 @@ void setup() {
 }
 
 void loop() {
-  
+  // Save sensor data to struct
   dataTX.temp = dht.readTemperature();            
   dataTX.relHumid = dht.readHumidity();           
   dataTX.dewPoint = getDewPoint(dataTX.temp, dataTX.relHumid);  
   dataTX.pressure = bmp.readPressure();
 
-  //Serial.print("Temp: ");           Serial.print(dataTX.temp);
-  //Serial.print(" C, Rel Humid: ");  Serial.print(dataTX.relHumid);
-  //Serial.print(" %, Dew Point: ");  Serial.print(dataTX.dewPoint);
-  //Serial.print(" C, Pressure: ");   Serial.print(dataTX.pressure); Serial.println(" kPa");
+  // Print values for debugging
+  /*
+  Serial.print("Temp: ");           Serial.print(dataTX.temp);
+  Serial.print(" C, Rel Humid: ");  Serial.print(dataTX.relHumid);
+  Serial.print(" %, Dew Point: ");  Serial.print(dataTX.dewPoint);
+  Serial.print(" C, Pressure: ");   Serial.print(dataTX.pressure); Serial.println(" kPa");
+  */
 
+  // Send data via NRF24
   nrf24.send((uint8_t*)&dataTX, sizeof(dataTX));
   nrf24.waitPacketSent();
 
   // DHT22 can only update readings every 2sec, so wait at least 2sec before running again
-  delay(10000);
+  delay(5000);
+}
+
+float getDewPoint(float tempData, float relHumidData){
+  // Equation from https://www.omnicalculator.com/physics/dew-point
+  
+  // Magnus coefficients
+  const float a = 17.625;
+  const float b = 243.04;
+
+  // Calculate intermediary value "alpha" which is used to calculate dew point
+  float alpha = log(relHumidData / 100) + (a * tempData) / (b + tempData);
+  float dewPoint = (b * alpha) / (a - alpha);
+
+  return dewPoint;
 }

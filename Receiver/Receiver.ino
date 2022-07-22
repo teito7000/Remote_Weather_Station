@@ -12,7 +12,7 @@ char timestamp[30];
 RTC_DS3231 rtc;
 RH_NRF24 nrf24(CE_PIN, CSN_PIN);
 
-struct sensorData {
+struct sensorData{
   float temp;
   float relHumid;
   float dewPoint;
@@ -20,8 +20,8 @@ struct sensorData {
 }; sensorData dataRX;
 
 void dateTime(uint16_t* date, uint16_t* time);
-void print2digitsSD(int number, File fileName);
-void print2digitsSerial(int number, File fileName);
+void printTwoDigitsSD(int number, File fileName);
+void printTwoDigitsSerial(int number, File fileName);
 
 void setup(){
   Serial.begin(9600);
@@ -32,10 +32,12 @@ void setup(){
     Serial.println("Card failed, or not present");
     while(1);
   }
+  // Remove existing data file to prevent clutter
   if(SD.exists("datalog.txt")){
     SD.remove("datalog.txt");
   }
-  SdFile::dateTimeCallback(dateTime);
+  // Used to set the time of file creation on SD card
+  SdFile::dateTimeCallback(dateTime); 
 
   if(!rtc.begin()){
     Serial.println("Couldn't find RTC");
@@ -54,24 +56,26 @@ void setup(){
 }
 
 void loop(){
+  // If NRF24 receives data, save to struct
   if(nrf24.available()){
     uint8_t len = sizeof(dataRX);
     if(nrf24.recv((uint8_t *)&dataRX, &len)){
+      // Also save time and sensor data to SD card
       File dataFile = SD.open("datalog.txt", FILE_WRITE);
-
+      
       if(dataFile){
         DateTime now = rtc.now();
         dataFile.print(now.year(), DEC);
         dataFile.print("-");
-        print2digitsSD(now.month(), dataFile);
+        printTwoDigitsSD(now.month(), dataFile);
         dataFile.print("-");
-        print2digitsSD(now.day(), dataFile);
+        printTwoDigitsSD(now.day(), dataFile);
         dataFile.print(", ");
-        print2digitsSD(now.hour(), dataFile);
+        printTwoDigitsSD(now.hour(), dataFile);
         dataFile.print(":");
-        print2digitsSD(now.minute(), dataFile);
+        printTwoDigitsSD(now.minute(), dataFile);
         dataFile.print(":");
-        print2digitsSD(now.second(), dataFile);
+        printTwoDigitsSD(now.second(), dataFile);
         dataFile.print(", ");
 
         dataFile.print(dataRX.temp);
@@ -81,29 +85,29 @@ void loop(){
         dataFile.print(dataRX.dewPoint);
         dataFile.print(", ");
         dataFile.println(dataRX.pressure);
-
-        /*
+ 
+        // Print values for debugging
         Serial.print(now.year(), DEC);
         Serial.print("-");
-        print2digitsSerial(now.month(), dataFile);
+        printTwoDigitsSerial(now.month(), dataFile);
         Serial.print("-");
-        print2digitsSerial(now.day(), dataFile);
+        printTwoDigitsSerial(now.day(), dataFile);
         Serial.print(", ");
-        print2digitsSerial(now.hour(), dataFile);
+        printTwoDigitsSerial(now.hour(), dataFile);
         Serial.print(":");
-        print2digitsSerial(now.minute(), dataFile);
+        printTwoDigitsSerial(now.minute(), dataFile);
         Serial.print(":");
-        print2digitsSerial(now.second(), dataFile);
+        printTwoDigitsSerial(now.second(), dataFile);
         Serial.print(", ");
-        */
 
+        // Print sensor data to serial monitor
         Serial.print(dataRX.temp);
         Serial.print(", ");
         Serial.print(dataRX.relHumid);
         Serial.print(", ");
         Serial.print(dataRX.dewPoint);
         Serial.print(", ");
-        Serial.println(dataRX.pressure);
+        Serial.println(dataRX.pressure/1000.0, 2);
 
         dataFile.close();
       }
@@ -126,14 +130,14 @@ void dateTime(uint16_t* date, uint16_t* time){
   *time = FAT_TIME(setupTime.hour(), setupTime.minute(), setupTime.second());
 }
 
-void print2digitsSD(int number, File fileName){
+void printTwoDigitsSD(int number, File fileName){
   if (number >= 0 && number < 10){
     fileName.print("0");
   }
   fileName.print(number, DEC);
 }
 
-void print2digitsSerial(int number, File fileName) {
+void printTwoDigitsSerial(int number, File fileName){
   if (number >= 0 && number < 10) {
     Serial.print("0");
   }

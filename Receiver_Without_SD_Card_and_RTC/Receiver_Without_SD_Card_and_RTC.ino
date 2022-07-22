@@ -30,6 +30,7 @@ void setup() {
 }
 
 void loop() {
+  // If NRF24 receives data, save to struct
   if(nrf24.available()){
     uint8_t len = sizeof(dataRX);
     if(nrf24.recv((uint8_t *)&dataRX, &len)){
